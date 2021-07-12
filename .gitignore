@@ -130,4 +130,7 @@ dmypy.json
 
 # Data
 data/
+*_stdout
+plaque_seg/
+struct_seg/
 *.zip

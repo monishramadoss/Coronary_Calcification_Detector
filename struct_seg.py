@@ -9,17 +9,20 @@ os.chdir(dname)
 
 import numpy as np
 import tensorflow as tf
-from jarvis.train import params
+from jarvis.train import custom
 from tensorflow import optimizers, losses
 from tensorflow.keras import Input, layers, Model, callbacks
 from sklearn.model_selection import train_test_split
 from tqdm import trange
 try:
     from jarvis.utils.general import gpus
-    gpus.autoselect(1)
+    #gpus.autoselect(1)
 except:
     pass
 
+os.makedirs('./struct_seg', exist_ok=True)
+os.makedirs('./struct_seg/log_dir', exist_ok=True)
+os.makedirs('./struct_seg/ckp', exist_ok=True)
 
 def dense_unet(inputs, filters=32):
     '''Model Creation'''
@@ -110,25 +113,24 @@ def happy_meal(weights=None, alpha=5, beta=1,  epsilon=0.01, cls=1):
 
 data = np.expand_dims(np.load('./data/structseg_data.npy'), (1, -1)).astype(np.float32)
 label = np.expand_dims(np.load('./data/structseg_label.npy'), (1, -1))
-train_x, train_y, valid_x, valid_y = train_test_split(data, label, test_size=0.33, random_state=42)
-gen_train = tf.data.Dataset.from_tensor_slices([train_x, train_y])
-gen_valid = tf.data.Dataset.from_tensor_slices([valid_x, valid_y])
-model_checkpoint_callback = callbacks.ModelCheckpoint(filepath='./struct_seg/ckp/',
-                                                          save_weights_only=True,
-                                                          monitor='val_dsc',
-                                                          mode='max',
-                                                          save_best_only=True)
-reduce_lr_callback = callbacks.ReduceLROnPlateau(monitor='dsc', factor=0.8, patience=2, mode="max", verbose=1)
-early_stop_callback = callbacks.EarlyStopping(monitor='val_dsc', patience=20, verbose=0, mode='max',
-                                                  restore_best_weights=False)
+train_x, valid_x, train_y, valid_y = train_test_split(data, label, test_size=0.1, random_state=42)
+gen_train = tf.data.Dataset.from_tensor_slices((train_x, train_y)).batch(4).shuffle(100)
+gen_valid = tf.data.Dataset.from_tensor_slices((valid_x, valid_y)).batch(1)
+
+
+model_checkpoint_callback = callbacks.ModelCheckpoint(filepath='./struct_seg/ckp/', monitor='val_dsc_1',
+                                                          mode='max', save_best_only=True)
 tensorboard_callback = callbacks.TensorBoard('./struct_seg/log_dir', profile_batch=0)
 
-model = dense_unet(Input(shape=(1, 512, 512, 1)), 64)
+reduce_lr_callback = callbacks.ReduceLROnPlateau(monitor='dsc_1', factor=0.8, patience=2, mode="max", verbose=1)
+early_stop_callback = callbacks.EarlyStopping(monitor='val_dsc_1', patience=5, verbose=0, mode='max',
+                                                  restore_best_weights=False)
+
+model = dense_unet(Input(shape=(1, 512, 512, 1)), 32)
 model.compile(optimizer=optimizers.Adam(learning_rate=8e-4, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0),
-                  loss=happy_meal(None, 1.0, 0.3), metrics=[dsc_soft(cls=1)])
-model.fit(x=gen_train, epochs=200, validation_data=gen_valid, validation_freq=1,
+                  loss=happy_meal(None, 1.0, 0.3), metrics=[custom.dsc(cls=1)])
+model.save('./struct_seg/model.h5', include_optimizer=False, overwrite=True)
+model.fit(x=gen_train, epochs=1, validation_data=gen_valid, validation_freq=1,
               callbacks=[tensorboard_callback, model_checkpoint_callback, reduce_lr_callback, early_stop_callback])
 
-import yaml
-config = model.to_yaml()
-loaded_model = tf.keras.models.model_from_yaml(config)
+model.save('./struct_seg/model.h5', include_optimizer=False, overwrite=True)
