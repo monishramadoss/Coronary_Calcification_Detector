@@ -4,9 +4,18 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras import Input, layers, Model, callbacks
 
+abspath = os.path.abspath(__file__)
+dname = os.path.dirname(abspath)
+os.chdir(dname)
+
+try:
+    from jarvis.utils.general import gpus
+    gpus.autoselect(1)
+except:
+    pass
 
 if not os.path.isfile('./struct_seg/model.h5'):
-    file_out = open('./struct_seg_stdout', 'w')
+    file_out = open('./mask_seg', 'w')
     subprocess.Popen(['python', 'struct_seg.py'], stdout=file_out, shell=False)
     file_out.flush()
     file_out.close()

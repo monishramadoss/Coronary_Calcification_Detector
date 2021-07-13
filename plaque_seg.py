@@ -5,6 +5,7 @@ import os
 abspath = os.path.abspath(__file__)
 dname = os.path.dirname(abspath)
 os.chdir(dname)
+
 import subprocess
 import numpy as np
 import tensorflow as tf
@@ -15,7 +16,7 @@ from sklearn.model_selection import train_test_split
 from tqdm import trange
 try:
     from jarvis.utils.general import gpus
-    #gpus.autoselect(1)
+    gpus.autoselect(1)
 except:
     pass
 
