@@ -128,7 +128,6 @@ gen_valid = tf.data.Dataset.from_tensor_slices((valid_x, valid_y)).batch(1)
 model_checkpoint_callback = callbacks.ModelCheckpoint(filepath='./struct_seg/ckp/', monitor='val_dsc_1',
                                                           mode='max', save_best_only=True)
 tensorboard_callback = callbacks.TensorBoard('./struct_seg/log_dir', profile_batch=0)
-
 reduce_lr_callback = callbacks.ReduceLROnPlateau(monitor='dsc_1', factor=0.8, patience=2, mode="max", verbose=1)
 early_stop_callback = callbacks.EarlyStopping(monitor='val_dsc_1', patience=20, verbose=1, mode='max',
                                                   restore_best_weights=False)
@@ -136,7 +135,6 @@ early_stop_callback = callbacks.EarlyStopping(monitor='val_dsc_1', patience=20, 
 model = dense_unet(Input(shape=(1, 512, 512, 1)), 64)
 model.compile(optimizer=optimizers.Adam(learning_rate=1e-4, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0),
                   loss=happy_meal(None, 1.0, 0.3), metrics=[custom.dsc(cls=1)])
-# model.fit(x=gen_train, epochs=200, validation_data=gen_valid, validation_freq=1,
-#               callbacks=[tensorboard_callback, model_checkpoint_callback, reduce_lr_callback, early_stop_callback])
-
-# model.save('./struct_seg/model.h5', include_optimizer=False, overwrite=True)
+model.fit(x=gen_train, epochs=200, validation_data=gen_valid, validation_freq=1,
+              callbacks=[tensorboard_callback, model_checkpoint_callback, reduce_lr_callback, early_stop_callback])
+model.save('./struct_seg/model.h5', include_optimizer=False, overwrite=True)
