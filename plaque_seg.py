@@ -112,8 +112,9 @@ def happy_meal(weights=None, alpha=5, beta=1,  epsilon=0.01, cls=1):
         return l2(y_true, y_pred) + l1(y_true, y_pred)
     return calc_loss
 
-data = np.expand_dims(np.load('./data/plaque_data.npy'), (1, -1)).astype(np.float32)
-label = np.expand_dims(np.load('./data/plaque_label.npy'), (1, -1))
+data = np.expand_dims(np.load('./data/orca_data.npy'), (1, -1)).astype(np.float32)
+data = np.clip(data, 30, 150)
+label = np.expand_dims(np.load('./data/orca_label.npy'), (1, -1))
 
 if not os.path.isfile('./data/heart_msk_data.npy'):
     file_out = open('./msk_gen_stdout', 'w')

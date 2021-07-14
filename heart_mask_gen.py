@@ -22,6 +22,7 @@ if not os.path.isfile('./struct_seg/model.h5'):
 
 model = tf.keras.models.load_model('./struct_seg/model.h5', compile=False)
 data = np.expand_dims(np.load('./data/plaque_data.npy'), (1, -1)).astype(np.float32)
+data = np.clip(data, -100, 100) / 100
 label = np.expand_dims(np.load('./data/plaque_label.npy'), (1, -1))
 logit = model.predict(data, batch_size=4, workers=12)
 logit = np.argmax(logit, axis=-1)
