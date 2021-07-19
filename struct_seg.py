@@ -112,27 +112,20 @@ def happy_meal(weights=None, alpha=5, beta=1,  epsilon=0.01, cls=1):
     return calc_loss
 
 data = np.expand_dims(np.load('./data/structseg_data.npy'), (1, -1)).astype(np.float32)
-print(data[64][0].shape, data.min(), data.max())
+label = np.expand_dims(np.load('./data/structseg_label.npy'), (1, -1))
+
 data = np.clip(data, -100, 100) / 100
 
-import matplotlib.pyplot as plt
-plt.imsave('test.png', np.squeeze(data[4][0]) )
-
-
-label = np.expand_dims(np.load('./data/structseg_label.npy'), (1, -1))
 train_x, valid_x, train_y, valid_y = train_test_split(data, label, test_size=0.01, random_state=42)
 gen_train = tf.data.Dataset.from_tensor_slices((train_x, train_y)).batch(4).shuffle(100)
 gen_valid = tf.data.Dataset.from_tensor_slices((valid_x, valid_y)).batch(1)
 
-
-model_checkpoint_callback = callbacks.ModelCheckpoint(filepath='./struct_seg/ckp/', monitor='val_dsc_1',
-                                                          mode='max', save_best_only=True)
+model_checkpoint_callback = callbacks.ModelCheckpoint(filepath='./struct_seg/ckp/', monitor='val_dsc_1', mode='max', save_best_only=True)
 tensorboard_callback = callbacks.TensorBoard('./struct_seg/log_dir', profile_batch=0)
-reduce_lr_callback = callbacks.ReduceLROnPlateau(monitor='dsc_1', factor=0.8, patience=2, mode="max", verbose=1)
-early_stop_callback = callbacks.EarlyStopping(monitor='val_dsc_1', patience=20, verbose=1, mode='max',
-                                                  restore_best_weights=False)
+reduce_lr_callback = callbacks.ReduceLROnPlateau(monitor='dsc_1', factor=0.08, patience=2, mode="max", verbose=1)
+early_stop_callback = callbacks.EarlyStopping(monitor='val_dsc_1', patience=20, verbose=1, mode='max', restore_best_weights=False)
 
-model = dense_unet(Input(shape=(1, 512, 512, 1)), 64)
+model = dense_unet(Input(shape=(1, 512, 512, 1)), 32)
 model.compile(optimizer=optimizers.Adam(learning_rate=1e-4, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0),
                   loss=happy_meal(None, 1.0, 0.3), metrics=[custom.dsc(cls=1)])
 model.fit(x=gen_train, epochs=200, validation_data=gen_valid, validation_freq=1,
