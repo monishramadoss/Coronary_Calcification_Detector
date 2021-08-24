@@ -110,38 +110,11 @@ class sce_dsc(layers.Layer):
         return loss
 
 
-def dsc_soft(weights=None, scale=1.0, epsilon=0.01, cls=1):
-    @tf.function
-    def dsc(y_true, y_pred):
-        true = tf.cast(y_true[..., 0] == cls, tf.float32)
-        pred = tf.nn.softmax(y_pred, axis=-1)[..., cls]
-        if weights is not None:
-            true = true * (weights[...])
-            pred = pred * (weights[...])
-        A = tf.math.reduce_sum(true * pred) * 2
-        B = tf.math.reduce_sum(true) + tf.math.reduce_sum(pred) + epsilon
-        return (1.0 - A / B) * scale
-    return dsc
-
-def sce(weights=None, scale=1.0):
-    loss = losses.SparseCategoricalCrossentropy(from_logits=True)
-    @tf.function
-    def sce(y_true, y_pred):
-        return loss(y_true=y_true, y_pred=y_pred, sample_weight=weights) * scale
-    return sce
-
-def happy_meal(weights=None, alpha=5, beta=1,  epsilon=0.01, cls=1):
-    l2 = sce(None, alpha)
-    l1 = dsc_soft(weights, beta, epsilon, cls)
-    @tf.function
-    def calc_loss(y_true, y_pred):
-        return l2(y_true, y_pred) + l1(y_true, y_pred)
-    return calc_loss
-
 data = np.expand_dims(np.load('./data/structseg_data.npy'), (1, -1)).astype(np.float32)
 label = np.expand_dims(np.load('./data/structseg_label.npy'), (1, -1))
 
-data = np.clip(data, -100, 100) / 100
+data = np.clip(data, -100, 100) / 50
+label = np.clip(label, 0, 1.0)
 
 train_x, valid_x, train_y, valid_y = train_test_split(data, label, test_size=0.01, random_state=42)
 gen_train = tf.data.Dataset.from_tensor_slices((train_x, train_y)).batch(4).shuffle(100)
