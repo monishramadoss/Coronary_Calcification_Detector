@@ -83,9 +83,9 @@ def dense_unet(inputs, filters=32):
     return model
 
 
-class sce_dsc(layers.Layer):
+class sce_dsc(losses.Loss):
     def __init__(self, scale_sce=1.0, scale_dsc=1.0, epsilon=0.01, name=None):
-        super(sce_dsc, self).__init__(name=name)
+        super(sce_dsc, self).__init__()
         self.sce = losses.SparseCategoricalCrossentropy(from_logits=True)
         self.epsilon = epsilon
         self.scale_a = scale_sce
@@ -102,18 +102,18 @@ class sce_dsc(layers.Layer):
         B = tf.math.reduce_sum(true) + tf.math.reduce_sum(pred) + self.epsilon
         return (1.0 - A / B) * self.scale_b
 
-    def call(self, y_true, y_pred, weights=None):
-        sce_loss = self.sce(y_true=y_true, y_pred=y_pred, sample_weight=weights) * self.scale_a
-        dsc_loss = self.dsc(y_true=y_true, y_pred=y_pred, sample_weight=weights)
+    def call(self, y_true, y_pred, sample_weight=None):
+        sce_loss = self.sce(y_true=y_true, y_pred=y_pred, sample_weight=sample_weight) * self.scale_a
+        dsc_loss = self.dsc(y_true=y_true, y_pred=y_pred, sample_weight=sample_weight)
         loss = sce_loss + dsc_loss      
-        self.add_loss(loss)
+        #self.add_loss(loss)
         return loss
 
 
 data = np.expand_dims(np.load('./data/structseg_data.npy'), (1, -1)).astype(np.float32)
 label = np.expand_dims(np.load('./data/structseg_label.npy'), (1, -1))
 
-data = np.clip(data, -100, 100) / 50
+#data = np.clip(data, -100, 100) / 50
 label = np.clip(label, 0, 1.0)
 
 train_x, valid_x, train_y, valid_y = train_test_split(data, label, test_size=0.01, random_state=42)
